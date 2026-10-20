@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#ece7dc"/>
+  <path d="M170 700V360a230 230 0 0 1 460 0v340" fill="none" stroke="#9ca58f" stroke-width="2"/>
+  <path d="M230 700V390a170 170 0 0 1 340 0v310" fill="none" stroke="#9ca58f" stroke-opacity=".5"/>
+  <circle cx="400" cy="430" r="75" fill="#9ca58f" fill-opacity=".22"/>
+  <text x="400" y="905" text-anchor="middle" font-family="Georgia,serif" font-size="18" letter-spacing="7" fill="#5f665c">NEW BEGINNINGS</text>
+</svg>
