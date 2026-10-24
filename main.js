@@ -108,68 +108,22 @@ form.addEventListener('submit', async event => {
 });
 updateAttendance();
 
-// Original, quiet piano-style accompaniment synthesized locally with Web Audio.
-// Autoplay when permitted; otherwise start on the first guest interaction.
+// Original rendered piano piece, with browser-compatible autoplay and guest controls.
 (() => {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return;
+  const music = document.querySelector('#wedding-music');
   const control = document.querySelector('.music-control');
   const toggle = document.querySelector('#music-toggle');
   const label = document.querySelector('#music-label');
   const message = document.querySelector('#music-status');
-  if (!control || !toggle) return;
+  if (!music || !control || !toggle) return;
   control.hidden = false;
-  let context;
-  let master;
-  let timer;
-  let playing = false;
-  let requested = false;
+  music.volume = 0.65;
   let automaticStart = true;
-  let nextNote = 0;
-  let step = 0;
-  // Four gentle chords, each expressed as a slow, repeating arpeggio.
-  const chords = [[48, 55, 60, 64], [45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59]];
-  const pattern = [0, 1, 2, 3, 2, 1, 3, 2];
-  function note(midi, start) {
-    const frequency = 440 * Math.pow(2, (midi - 69) / 12);
-    const envelope = context.createGain();
-    envelope.gain.setValueAtTime(0, start);
-    envelope.gain.linearRampToValueAtTime(0.18, start + 0.018);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 2.7);
-    envelope.connect(master);
-    // A mellow fundamental and a very soft overtone approximate a piano attack.
-    [1, 2].forEach((harmonic, index) => {
-      const oscillator = context.createOscillator();
-      const level = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = frequency * harmonic;
-      level.gain.value = index === 0 ? 1 : 0.12;
-      oscillator.connect(level);
-      level.connect(envelope);
-      oscillator.start(start);
-      oscillator.stop(start + 2.8);
-      oscillator.onended = () => { oscillator.disconnect(); level.disconnect(); };
-    });
-  }
-  function schedule() {
-    while (nextNote < context.currentTime + 0.2) {
-      const chord = chords[Math.floor(step / pattern.length) % chords.length];
-      note(chord[pattern[step % pattern.length]] + 12, nextNote);
-      nextNote += 0.72;
-      step += 1;
-    }
-  }
-  function render() {
+  let requested = false;
+  function render(playing) {
     toggle.setAttribute('aria-pressed', String(playing));
-    toggle.setAttribute('aria-label', playing ? 'Pause soft background music' : 'Play soft background music');
+    toggle.setAttribute('aria-label', playing ? 'Pause background music' : 'Play background music');
     label.textContent = playing ? 'Pause music' : 'Play music';
-  }
-  async function pause() {
-    clearInterval(timer);
-    timer = undefined;
-    playing = false;
-    render();
-    if (context && context.state === 'running') await context.suspend();
   }
   function removeAutomaticListeners() {
     automaticStart = false;
@@ -177,47 +131,27 @@ updateAttendance();
     document.removeEventListener('touchend', firstInteraction);
     document.removeEventListener('keydown', firstInteraction);
   }
-  function activate() {
-    if (!requested || document.hidden || context.state !== 'running' || playing) return;
-    nextNote = Math.max(nextNote, context.currentTime + 0.05);
-    playing = true;
+  function pause() {
+    requested = false;
+    music.pause();
+    render(false);
     message.textContent = '';
-    render();
-    schedule();
-    timer = window.setInterval(schedule, 100);
-    removeAutomaticListeners();
   }
-  function start() {
+  async function start() {
     if (document.hidden) return;
     requested = true;
     message.textContent = '';
     try {
-      if (!context) {
-        context = new AudioContextClass();
-        master = context.createGain();
-        master.gain.value = 0.5;
-        master.connect(context.destination);
-        nextNote = context.currentTime + 0.05;
-        context.addEventListener('statechange', () => {
-          if (context.state === 'running') {
-            activate();
-          } else {
-            clearInterval(timer);
-            playing = false;
-            render();
-            if (requested && !document.hidden) message.textContent = 'Tap Play music to hear the piano.';
-          }
-        });
-      }
-      if (context.state !== 'running') message.textContent = 'Tap Play music to hear the piano.';
-      // A blocked resume may stay pending until a gesture. Keep controls responsive.
-      context.resume().then(activate).catch(() => {
-        if (requested) message.textContent = 'Tap Play music to start the music.';
-      });
-      activate();
-    } catch {
-      requested = false;
-      message.textContent = 'Music could not start. Please try again.';
+      await music.play();
+      if (!requested || document.hidden) { music.pause(); return; }
+      render(true);
+      removeAutomaticListeners();
+    } catch (error) {
+      if (!requested) return;
+      render(false);
+      message.textContent = error.name === 'NotAllowedError'
+        ? 'Tap Play music to hear our piano piece.'
+        : 'Music could not load. Tap Play music to retry.';
     }
   }
   function firstInteraction(event) {
@@ -227,22 +161,24 @@ updateAttendance();
   }
   toggle.addEventListener('click', () => {
     removeAutomaticListeners();
-    if (playing) {
-      requested = false;
-      pause().catch(() => {});
-    } else {
-      start();
-    }
+    if (!music.paused) pause();
+    else start();
+  });
+  music.addEventListener('playing', () => {
+    if (!requested || document.hidden) { music.pause(); return; }
+    render(true);
+    message.textContent = '';
+  });
+  music.addEventListener('pause', () => render(false));
+  music.addEventListener('error', () => {
+    render(false);
+    message.textContent = 'Music could not load. Tap Play music to retry.';
   });
   document.addEventListener('click', firstInteraction);
   document.addEventListener('touchend', firstInteraction, { passive: true });
   document.addEventListener('keydown', firstInteraction);
-  // Pause when hidden. Coming back never overrides a guest's pause choice.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      requested = false;
-      pause().catch(() => {});
-    }
+    if (document.hidden) pause();
   });
   start();
 })();
