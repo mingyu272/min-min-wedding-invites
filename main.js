@@ -154,7 +154,7 @@ updateAttendance();
   function schedule() {
     while (nextNote < context.currentTime + 0.2) {
       const chord = chords[Math.floor(step / pattern.length) % chords.length];
-      note(chord[pattern[step % pattern.length]], nextNote);
+      note(chord[pattern[step % pattern.length]] + 12, nextNote);
       nextNote += 0.72;
       step += 1;
     }
@@ -173,7 +173,8 @@ updateAttendance();
   }
   function removeAutomaticListeners() {
     automaticStart = false;
-    document.removeEventListener('pointerdown', firstInteraction);
+    document.removeEventListener('click', firstInteraction);
+    document.removeEventListener('touchend', firstInteraction);
     document.removeEventListener('keydown', firstInteraction);
   }
   function activate() {
@@ -194,11 +195,21 @@ updateAttendance();
       if (!context) {
         context = new AudioContextClass();
         master = context.createGain();
-        master.gain.value = 0.24;
+        master.gain.value = 0.5;
         master.connect(context.destination);
         nextNote = context.currentTime + 0.05;
-        context.addEventListener('statechange', activate);
+        context.addEventListener('statechange', () => {
+          if (context.state === 'running') {
+            activate();
+          } else {
+            clearInterval(timer);
+            playing = false;
+            render();
+            if (requested && !document.hidden) message.textContent = 'Tap Play music to hear the piano.';
+          }
+        });
       }
+      if (context.state !== 'running') message.textContent = 'Tap Play music to hear the piano.';
       // A blocked resume may stay pending until a gesture. Keep controls responsive.
       context.resume().then(activate).catch(() => {
         if (requested) message.textContent = 'Tap Play music to start the music.';
@@ -223,7 +234,8 @@ updateAttendance();
       start();
     }
   });
-  document.addEventListener('pointerdown', firstInteraction);
+  document.addEventListener('click', firstInteraction);
+  document.addEventListener('touchend', firstInteraction, { passive: true });
   document.addEventListener('keydown', firstInteraction);
   // Pause when hidden. Coming back never overrides a guest's pause choice.
   document.addEventListener('visibilitychange', () => {
