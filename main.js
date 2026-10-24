@@ -21,6 +21,7 @@ document.addEventListener('keydown', event => {
   }
 });
 
+// Each gallery button owns its thumbnail, full-size URL and caption.
 const photos = [...document.querySelectorAll('.gallery-item')];
 const lightbox = document.querySelector('#lightbox');
 const lightboxImage = document.querySelector('#lightbox-image');
@@ -71,6 +72,8 @@ form.addEventListener('input', () => {
   status.textContent = '';
   form.elements.fullName.setCustomValidity('');
 });
+// Integration boundary: replace this function with an awaited backend request.
+// Do not display a delivery confirmation until the backend confirms success.
 async function submitRsvp(payload) {
   return { sent: false, preview: true };
 }
@@ -104,3 +107,101 @@ form.addEventListener('submit', async event => {
   }
 });
 updateAttendance();
+
+// Original, quiet piano-style accompaniment synthesized locally with Web Audio.
+// No remote audio, downloads, autoplay, or saved listening preferences.
+(() => {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  const control = document.querySelector('.music-control');
+  const toggle = document.querySelector('#music-toggle');
+  const label = document.querySelector('#music-label');
+  const message = document.querySelector('#music-status');
+  if (!control || !toggle) return;
+  control.hidden = false;
+  let context;
+  let master;
+  let timer;
+  let playing = false;
+  let busy = false;
+  let nextNote = 0;
+  let step = 0;
+  // Four gentle chords, each expressed as a slow, repeating arpeggio.
+  const chords = [[48, 55, 60, 64], [45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59]];
+  const pattern = [0, 1, 2, 3, 2, 1, 3, 2];
+  function note(midi, start) {
+    const frequency = 440 * Math.pow(2, (midi - 69) / 12);
+    const envelope = context.createGain();
+    envelope.gain.setValueAtTime(0, start);
+    envelope.gain.linearRampToValueAtTime(0.18, start + 0.018);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 2.7);
+    envelope.connect(master);
+    // A mellow fundamental and a very soft overtone approximate a piano attack.
+    [1, 2].forEach((harmonic, index) => {
+      const oscillator = context.createOscillator();
+      const level = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency * harmonic;
+      level.gain.value = index === 0 ? 1 : 0.12;
+      oscillator.connect(level);
+      level.connect(envelope);
+      oscillator.start(start);
+      oscillator.stop(start + 2.8);
+      oscillator.onended = () => { oscillator.disconnect(); level.disconnect(); };
+    });
+  }
+  function schedule() {
+    while (nextNote < context.currentTime + 0.2) {
+      const chord = chords[Math.floor(step / pattern.length) % chords.length];
+      note(chord[pattern[step % pattern.length]], nextNote);
+      nextNote += 0.72;
+      step += 1;
+    }
+  }
+  function render() {
+    toggle.setAttribute('aria-pressed', String(playing));
+    toggle.setAttribute('aria-label', playing ? 'Pause soft background music' : 'Play soft background music');
+    label.textContent = playing ? 'Pause music' : 'Play music';
+  }
+  async function pause() {
+    clearInterval(timer);
+    timer = undefined;
+    playing = false;
+    render();
+    if (context && context.state === 'running') await context.suspend();
+  }
+  toggle.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    message.textContent = '';
+    try {
+      if (playing) {
+        await pause();
+      } else {
+        if (!context) {
+          context = new AudioContextClass();
+          master = context.createGain();
+          master.gain.value = 0.24;
+          master.connect(context.destination);
+          nextNote = context.currentTime + 0.05;
+        }
+        await context.resume();
+        if (document.hidden) { await pause(); return; }
+        nextNote = Math.max(nextNote, context.currentTime + 0.05);
+        playing = true;
+        render();
+        schedule();
+        timer = window.setInterval(schedule, 100);
+      }
+    } catch {
+      await pause().catch(() => {});
+      message.textContent = 'Music could not start. Please try again.';
+    } finally {
+      busy = false;
+    }
+  });
+  // Returning to the page never resumes sound without another guest gesture.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && playing) pause().catch(() => {});
+  });
+})();
