@@ -109,7 +109,7 @@ form.addEventListener('submit', async event => {
 updateAttendance();
 
 // Original, quiet piano-style accompaniment synthesized locally with Web Audio.
-// No remote audio, downloads, autoplay, or saved listening preferences.
+// Autoplay when permitted; otherwise start on the first guest interaction.
 (() => {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return;
@@ -123,7 +123,8 @@ updateAttendance();
   let master;
   let timer;
   let playing = false;
-  let busy = false;
+  let requested = false;
+  let automaticStart = true;
   let nextNote = 0;
   let step = 0;
   // Four gentle chords, each expressed as a slow, repeating arpeggio.
@@ -170,38 +171,66 @@ updateAttendance();
     render();
     if (context && context.state === 'running') await context.suspend();
   }
-  toggle.addEventListener('click', async () => {
-    if (busy) return;
-    busy = true;
+  function removeAutomaticListeners() {
+    automaticStart = false;
+    document.removeEventListener('pointerdown', firstInteraction);
+    document.removeEventListener('keydown', firstInteraction);
+  }
+  function activate() {
+    if (!requested || document.hidden || context.state !== 'running' || playing) return;
+    nextNote = Math.max(nextNote, context.currentTime + 0.05);
+    playing = true;
+    message.textContent = '';
+    render();
+    schedule();
+    timer = window.setInterval(schedule, 100);
+    removeAutomaticListeners();
+  }
+  function start() {
+    if (document.hidden) return;
+    requested = true;
     message.textContent = '';
     try {
-      if (playing) {
-        await pause();
-      } else {
-        if (!context) {
-          context = new AudioContextClass();
-          master = context.createGain();
-          master.gain.value = 0.24;
-          master.connect(context.destination);
-          nextNote = context.currentTime + 0.05;
-        }
-        await context.resume();
-        if (document.hidden) { await pause(); return; }
-        nextNote = Math.max(nextNote, context.currentTime + 0.05);
-        playing = true;
-        render();
-        schedule();
-        timer = window.setInterval(schedule, 100);
+      if (!context) {
+        context = new AudioContextClass();
+        master = context.createGain();
+        master.gain.value = 0.24;
+        master.connect(context.destination);
+        nextNote = context.currentTime + 0.05;
+        context.addEventListener('statechange', activate);
       }
+      // A blocked resume may stay pending until a gesture. Keep controls responsive.
+      context.resume().then(activate).catch(() => {
+        if (requested) message.textContent = 'Tap Play music to start the music.';
+      });
+      activate();
     } catch {
-      await pause().catch(() => {});
+      requested = false;
       message.textContent = 'Music could not start. Please try again.';
-    } finally {
-      busy = false;
+    }
+  }
+  function firstInteraction(event) {
+    if (!automaticStart || event.target.closest?.('.music-control')) return;
+    if (event.type === 'keydown' && (event.ctrlKey || event.metaKey || event.altKey || ['Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(event.key))) return;
+    start();
+  }
+  toggle.addEventListener('click', () => {
+    removeAutomaticListeners();
+    if (playing) {
+      requested = false;
+      pause().catch(() => {});
+    } else {
+      start();
     }
   });
-  // Returning to the page never resumes sound without another guest gesture.
+  document.addEventListener('pointerdown', firstInteraction);
+  document.addEventListener('keydown', firstInteraction);
+  // Pause when hidden. Coming back never overrides a guest's pause choice.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && playing) pause().catch(() => {});
+    if (document.hidden) {
+      requested = false;
+      pause().catch(() => {});
+    }
   });
+  start();
 })();
