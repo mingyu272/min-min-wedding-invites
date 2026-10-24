@@ -7,8 +7,8 @@
   <meta name="description" content="Join Mingyu & Kristie for their wedding on June 12, 2027, at FKI Tower in Seoul, South Korea.">
   <title>Mingyu & Kristie · June 12, 2027</title>
   <link rel="icon" href="flowers.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=youtube-music-7">
-  <script src="main.js?v=youtube-music-7" defer></script>
+  <link rel="stylesheet" href="style.css?v=uploaded-song-8">
+  <script src="main.js?v=uploaded-song-8" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -19,6 +19,7 @@
     <a href="#home">Home</a><a href="#story">Our Story</a><a href="#wedding">Wedding</a><a href="#gallery">Gallery</a><a href="#visiting">Visiting Korea</a><a href="#rsvp">RSVP</a><a href="#gifts">Gifts</a>
   </nav>
 </header>
+<div class="music-control" hidden><button id="music-toggle" type="button" aria-pressed="false" aria-label="Play wedding music"><span aria-hidden="true">♫</span> <span id="music-label">Play music</span></button><span id="music-status" class="music-status" role="status"></span></div>
 <main id="main">
 <section id="home" class="hero section-wrap">
   <div class="hero-copy"><p class="eyebrow">Together with our families</p><h1>Mingyu <em>&</em> Kristie</h1><p class="hero-subtitle">Min(gyu) & Min(ji)</p><p class="hero-invitation">A new chapter, together.</p><div class="hero-date">JUNE 12, 2027 <span>·</span> SEOUL, KOREA</div><a class="button" href="#wedding">Join us in Seoul <span aria-hidden="true">↗</span></a></div>
@@ -28,11 +29,8 @@
 <section id="welcome" class="welcome section-wrap reveal"><p class="eyebrow">You're invited</p><h2>Our favorite people.<br>One very special day.</h2><p>We’re getting married, and we’d love to have you by our side. Join us for a day of love, laughter, and new memories in the heart of Seoul.</p><p class="personal-note">With love, Mingyu and Kristie</p>
 <div class="soundtrack">
   <h3>A little music for our day</h3>
-  <div class="soundtrack-player">
-    <iframe src="https://www.youtube-nocookie.com/embed/PIH8FBJx9T4?autoplay=1&amp;controls=1&amp;loop=1&amp;playlist=PIH8FBJx9T4&amp;playsinline=1" title="Our wedding soundtrack — YouTube player" width="560" height="315" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-  </div>
-  <p class="soundtrack-note">Press Play if the music doesn’t start automatically. You can pause it using the player controls.</p>
-  <a href="https://music.youtube.com/watch?v=PIH8FBJx9T4" target="_blank" rel="noopener noreferrer">Open in YouTube Music ↗</a>
+  <audio id="wedding-music" src="wedding-song.mp3" controls autoplay loop preload="auto" aria-label="Can’t Take My Eyes off You — wedding music"></audio>
+  <p class="soundtrack-note">Can’t Take My Eyes off You · Joey Stamper</p>
 </div>
 </section>
 <section id="video" class="section-wrap reveal"><div class="section-heading"><p class="eyebrow">A little hello</p><h2>Before the big day</h2></div><div class="video-placeholder" role="img" aria-label="Introduction video placeholder. Our video is coming soon."><span class="play-symbol" aria-hidden="true">▷</span><p>A little of us, on film</p><span>INTRODUCTION VIDEO · COMING SOON</span></div></section>

@@ -107,3 +107,83 @@ form.addEventListener('submit', async event => {
   }
 });
 updateAttendance();
+
+// Uploaded wedding song: autoplay when allowed, with native and floating pause controls.
+(() => {
+  const music = document.querySelector('#wedding-music');
+  const control = document.querySelector('.music-control');
+  const toggle = document.querySelector('#music-toggle');
+  const label = document.querySelector('#music-label');
+  const message = document.querySelector('#music-status');
+  if (!music || !control || !toggle) return;
+  control.hidden = false;
+  music.volume = 0.65;
+  let automaticStart = true;
+  let requested = false;
+  function render(playing) {
+    toggle.setAttribute('aria-pressed', String(playing));
+    toggle.setAttribute('aria-label', playing ? 'Pause background music' : 'Play background music');
+    label.textContent = playing ? 'Pause music' : 'Play music';
+  }
+  function removeAutomaticListeners() {
+    automaticStart = false;
+    document.removeEventListener('click', firstInteraction);
+    document.removeEventListener('touchend', firstInteraction);
+    document.removeEventListener('keydown', firstInteraction);
+  }
+  function pause() {
+    requested = false;
+    music.pause();
+    render(false);
+    message.textContent = '';
+  }
+  async function start() {
+    if (document.hidden) return;
+    requested = true;
+    message.textContent = '';
+    try {
+      await music.play();
+      if (!requested || document.hidden) { music.pause(); return; }
+      render(true);
+      removeAutomaticListeners();
+    } catch (error) {
+      if (!requested) return;
+      render(false);
+      message.textContent = error.name === 'NotAllowedError'
+        ? 'Tap Play music to hear our wedding song.'
+        : 'Music could not load. Tap Play music to retry.';
+    }
+  }
+  function firstInteraction(event) {
+    if (!automaticStart || event.target.closest?.('.music-control')) return;
+    if (event.type === 'keydown' && (event.ctrlKey || event.metaKey || event.altKey || ['Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(event.key))) return;
+    start();
+  }
+  toggle.addEventListener('click', () => {
+    removeAutomaticListeners();
+    if (!music.paused) pause();
+    else start();
+  });
+  music.addEventListener('playing', () => {
+    if (!requested || document.hidden) { music.pause(); return; }
+    render(true);
+    message.textContent = '';
+  });
+  music.addEventListener('play', () => { requested = true; });
+  music.addEventListener('pause', () => {
+    requested = false;
+    render(false);
+    removeAutomaticListeners();
+  });
+  music.addEventListener('error', () => {
+    render(false);
+    message.textContent = 'Music could not load. Tap Play music to retry.';
+  });
+  document.addEventListener('click', firstInteraction);
+  document.addEventListener('touchend', firstInteraction, { passive: true });
+  document.addEventListener('keydown', firstInteraction);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pause();
+  });
+  start();
+})();
