@@ -108,7 +108,7 @@ form.addEventListener('submit', async event => {
 });
 updateAttendance();
 
-// Original rendered piano piece, with browser-compatible autoplay and guest controls.
+// Original light swing jazz piece, with browser-compatible autoplay and guest controls.
 (() => {
   const music = document.querySelector('#wedding-music');
   const control = document.querySelector('.music-control');
@@ -150,7 +150,7 @@ updateAttendance();
       if (!requested) return;
       render(false);
       message.textContent = error.name === 'NotAllowedError'
-        ? 'Tap Play music to hear our piano piece.'
+        ? 'Tap Play music to hear our jazz piece.'
         : 'Music could not load. Tap Play music to retry.';
     }
   }
